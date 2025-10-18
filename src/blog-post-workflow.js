@@ -159,7 +159,8 @@ for (const siteUrl of feedList) {
 								}
 
 								if (ENABLE_VALIDATION && !item.link) {
-									reject('Cannot read response->item->link');
+									core.error('Missing link for RSS item. This is required for valid RSS feeds.');
+									return null; // Skip items without links
 								}
 								// Custom tags
 								const customTags = {};
@@ -198,7 +199,23 @@ for (const siteUrl of feedList) {
 										eval(ITEM_EXEC);
 									} catch (e) {
 										core.error('Failure in executing `item_exec` parameter');
-										core.error(e);
+										core.error(`Error details: ${e.message}`);
+										core.error(`Problematic code: ${ITEM_EXEC}`);
+										core.error(
+											`Item being processed: ${JSON.stringify({ title: post.title, url: post.url }, null, 2)}`,
+										);
+
+										// Provide guidance for common issues
+										if (e.name === 'SyntaxError') {
+											core.error(
+												'This appears to be a syntax error in your JavaScript code. Please check for missing semicolons, unmatched brackets, or invalid syntax.',
+											);
+										} else if (e.name === 'ReferenceError') {
+											core.error(
+												'This appears to be a reference error. Make sure you are only using the available variables: post.title, post.url, post.description, post.date, post.categories, and custom tags.',
+											);
+										}
+
 										process.exit(1);
 									}
 								}
@@ -260,19 +277,51 @@ const runWorkflow = async () => {
 					jobFailFlag = true;
 					// Rejected
 					core.error(`${runnerNameArray[index]} runner failed, please verify the configuration. Error:`);
-					if (result?.reason?.message?.startsWith('Status code')) {
-						const code = result.reason.message.replace('Status code ', '');
+
+					// Enhanced error handling with more specific error messages
+					const errorReason = result?.reason;
+					const errorMessage = errorReason?.message || errorReason?.toString() || 'Unknown error';
+
+					if (errorMessage.startsWith('Status code')) {
+						const code = errorMessage.replace('Status code ', '');
 						core.error(
 							`Looks like your website returned ${code}, There is nothing blog post workflow can do to fix it. Please check your website's RSS feed generation source code. Also double check the URL. If you are using a third party blogging platform, please reach out to the platform's support team and ask them why this is failing.`,
 						);
 						if (code === '503') {
 							core.error(
-								`If you are using Cloudflare or Akamai,  make sure that you have the user agent  ${userAgent} or GitHub actions IP ranges whitelisted in your firewall.`,
+								`If you are using Cloudflare or Akamai, make sure that you have the user agent ${userAgent} or GitHub actions IP ranges whitelisted in your firewall.`,
+							);
+						} else if (code === '404') {
+							core.error('The RSS feed URL was not found. Please verify the URL is correct and the RSS feed exists.');
+						} else if (code === '403') {
+							core.error(
+								'Access to the RSS feed was forbidden. Check if the feed requires authentication or if your IP is blocked.',
+							);
+						} else if (code === '500') {
+							core.error(
+								'The RSS feed server encountered an internal error. This is likely a temporary issue with the source website.',
 							);
 						}
+					} else if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('getaddrinfo')) {
+						core.error('DNS resolution failed. Please check if the RSS feed URL domain is correct and accessible.');
+					} else if (errorMessage.includes('ECONNREFUSED')) {
+						core.error('Connection refused. The RSS feed server may be down or the port may be blocked.');
+					} else if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timeout')) {
+						core.error(
+							'Request timed out. The RSS feed server may be slow or unresponsive. Consider increasing retry settings.',
+						);
+					} else if (errorMessage.includes('parse') || errorMessage.includes('Invalid XML')) {
+						core.error('Failed to parse RSS feed. The feed may be malformed or not a valid RSS/Atom feed.');
+					} else if (errorMessage.includes('ECONNRESET')) {
+						core.error('Connection was reset by the server. This may be a temporary network issue.');
 					} else {
-						core.error(result.reason || result.reason.message);
+						core.error(`Detailed error: ${errorMessage}`);
 					}
+
+					// Provide debugging information
+					core.info(`Feed URL: ${runnerNameArray[index]}`);
+					core.info(`User Agent: ${userAgent}`);
+					core.info(`Accept Header: ${acceptHeader}`);
 				}
 			});
 		})

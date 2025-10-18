@@ -374,7 +374,143 @@ If you are experiencing any bugs, don't forget to open a [new issue](https://git
  </a>
 
 
-### Contributors ✨
+### 🔧 Troubleshooting
+
+### Common Issues and Solutions
+
+#### 1. "0 blog posts fetched" Error
+
+**Possible Causes:**
+- Invalid RSS feed URL
+- RSS feed is empty or malformed
+- Network connectivity issues
+- Server blocking requests
+
+**Solutions:**
+- Verify your RSS feed URL in a browser
+- Check if the RSS feed is valid using an [RSS validator](https://validator.w3.org/feed/)
+- Ensure your feed contains recent posts
+- Try accessing the feed with different user agents
+
+#### 2. HTTP Status Code Errors
+
+**404 Not Found:**
+- RSS feed URL is incorrect or doesn't exist
+- Check the URL spelling and path
+
+**403 Forbidden:**
+- Server is blocking GitHub Actions IP ranges
+- RSS feed requires authentication
+- Try updating the `user_agent` parameter
+
+**503 Service Unavailable:**
+- Server is temporarily down or overloaded
+- If using Cloudflare/Akamai, whitelist GitHub Actions IPs
+- Increase `retry_count` and `retry_wait_time`
+
+**500 Internal Server Error:**
+- Temporary server issue
+- Contact the RSS feed provider
+
+#### 3. Parsing Errors
+
+**"Invalid XML" or "Parse Error":**
+- RSS feed contains malformed XML
+- Check feed with RSS validator
+- Contact the blog platform provider
+
+#### 4. Missing Required Fields
+
+**Missing Title Error:**
+- Some RSS items don't have titles
+- Set `skip_items_without_title: 'true'` to skip them
+- Or the workflow will auto-generate titles from URLs
+
+**Missing Link Error:**
+- RSS items must have valid links
+- Items without links will be automatically skipped
+
+#### 5. Workflow Permission Issues
+
+**Permission denied errors:**
+- Go to Settings → Actions → General
+- Set "Workflow permissions" to "Read and write permissions"
+- Ensure `contents: write` is set in your workflow
+
+#### 6. Date/Time Issues
+
+**Posts not appearing in correct order:**
+- Check if RSS feed has valid publication dates
+- Use `disable_sort: 'true'` if dates are problematic
+- Set `sort_order: 'asc'` for oldest-first ordering
+
+#### 7. Custom Template Issues
+
+**Template not rendering correctly:**
+- Verify template syntax: `$title`, `$url`, `$description`, etc.
+- Check for typos in variable names
+- Use `$newline` for line breaks
+
+**JavaScript execution errors in `item_exec`:**
+- Check JavaScript syntax carefully
+- Only use available variables: `post.title`, `post.url`, `post.description`, etc.
+- Test your code logic before applying
+
+#### 8. Performance Issues
+
+**Workflow taking too long:**
+- Reduce `max_post_count` to fetch fewer posts
+- Limit the number of RSS feeds
+- Consider running less frequently (e.g., daily instead of hourly)
+
+**Rate limiting:**
+- Increase `retry_wait_time` between requests
+- Reduce frequency of workflow runs
+
+### Debug Mode
+
+To enable verbose logging, add these environment variables to your workflow:
+
+```yaml
+env:
+  ACTIONS_STEP_DEBUG: true
+  ACTIONS_RUNNER_DEBUG: true
+```
+
+### Getting Help
+
+1. **Check the [Issues](https://github.com/gautamkrishnar/blog-post-workflow/issues)** - Someone might have faced the same problem
+2. **Create a new issue** with:
+   - Your workflow configuration
+   - Error messages
+   - RSS feed URL (if public)
+   - Expected vs actual behavior
+3. **Join discussions** in the repository for community support
+
+## 📋 Best Practices
+
+### Security
+- Never commit sensitive tokens to your repository
+- Use GitHub Secrets for authentication tokens
+- Regularly update the action to the latest version
+
+### Performance
+- Limit `max_post_count` to reasonable numbers (5-10 posts)
+- Use appropriate `retry_count` and `retry_wait_time` values
+- Consider running workflows during off-peak hours
+
+### RSS Feed Quality
+- Ensure your RSS feeds are well-formatted
+- Include all required fields (title, link, description, pubDate)
+- Test feeds with RSS validators before using
+
+### Template Design
+- Keep templates simple and readable
+- Test custom templates thoroughly
+- Use meaningful variable names in custom tags
+
+## Contributors
+ ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
 
